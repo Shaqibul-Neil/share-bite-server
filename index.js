@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -47,6 +47,25 @@ async function run() {
         .sort({ food_quantity: -1 })
         .limit(6);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //**************get food details**************
+    app.get("/food-details/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodsCollection.findOne(query);
+      res.send({ success: true, result });
+    });
+
+    //**************search food **************
+    app.get("/search", async (req, res) => {
+      const searchedText = req.query.search;
+      const result = await foodsCollection
+        .find({
+          food_name: { $regex: searchedText, $options: "i" },
+        })
+        .toArray();
       res.send(result);
     });
     // Send a ping to confirm a successful connection
