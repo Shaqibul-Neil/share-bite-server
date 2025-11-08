@@ -49,7 +49,13 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
-
+    //************get available foods**************
+    app.get("/available-foods", async (req, res) => {
+      const result = await foodsCollection
+        .find({ food_status: "Available" })
+        .toArray();
+      res.send(result);
+    });
     //**************get food details**************
     app.get("/food-details/:id", async (req, res) => {
       const id = req.params.id;
@@ -58,16 +64,15 @@ async function run() {
       res.send({ success: true, result });
     });
 
-    //**************search food **************
-    app.get("/search", async (req, res) => {
-      const searchedText = req.query.search;
-      const result = await foodsCollection
-        .find({
-          food_name: { $regex: searchedText, $options: "i" },
-        })
-        .toArray();
-      res.send(result);
-    });
+    // //**************search food **************
+    // app.get("/search", async (req, res) => {
+    //   const result = await foodsCollection
+    //     .find({
+    //       food_name: { $regex: searchedText, $options: "i" },
+    //     })
+    //     .toArray();
+    //   res.send(result);
+    // });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
