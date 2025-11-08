@@ -27,6 +27,28 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+    //database creation
+    const db = client.db("shareBiteDB");
+    const foodsCollection = db.collection("foods");
+
+    //***************All Apis***************
+    //***********Foods Related Api***********
+    //************get all foods**************
+    app.get("/foods", async (req, res) => {
+      const cursor = foodsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //************get food on quantity**************
+    app.get("/food-quantity", async (req, res) => {
+      const cursor = foodsCollection
+        .find()
+        .sort({ food_quantity: -1 })
+        .limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
