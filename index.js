@@ -58,7 +58,7 @@ async function run() {
       res.send(result);
     });
     //**************get food details**************
-    app.get("/food-details/:id", async (req, res) => {
+    app.get("/food/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodsCollection.findOne(query);
@@ -72,12 +72,21 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+    //************get request on food**************
+    app.get("/requests/food/:foodID", async (req, res) => {
+      const foodId = req.params.foodID;
+      const query = { foodId: foodId };
+      const cursor = requestCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     //************post a request**************
     app.post("/requests", async (req, res) => {
       const newRequest = req.body;
       const result = await requestCollection.insertOne(newRequest);
       res.send({ success: true, result });
     });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
