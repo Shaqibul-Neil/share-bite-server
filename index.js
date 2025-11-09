@@ -77,7 +77,16 @@ async function run() {
       const result = await foodsCollection.insertOne(newFood);
       res.send({ success: true, result });
     });
-
+    //**************update a food**************
+    app.put("/update-food/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateFood = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = {};
+      const update = { $set: updateFood };
+      const result = await foodsCollection.updateOne(query, update, options);
+      res.send({ success: true, result });
+    });
     //**************Request Food Api**************
     //************get all request**************
     app.get("/requests", async (req, res) => {
