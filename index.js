@@ -30,6 +30,7 @@ async function run() {
     //database creation
     const db = client.db("shareBiteDB");
     const foodsCollection = db.collection("foods");
+    const requestCollection = db.collection("requests");
 
     //***************All Apis***************
     //***********Foods Related Api***********
@@ -64,15 +65,19 @@ async function run() {
       res.send({ success: true, result });
     });
 
-    // //**************search food **************
-    // app.get("/search", async (req, res) => {
-    //   const result = await foodsCollection
-    //     .find({
-    //       food_name: { $regex: searchedText, $options: "i" },
-    //     })
-    //     .toArray();
-    //   res.send(result);
-    // });
+    //**************Request Food Api**************
+    //************get all request**************
+    app.get("/requests", async (req, res) => {
+      const cursor = requestCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    //************post a request**************
+    app.post("/requests", async (req, res) => {
+      const newRequest = req.body;
+      const result = await requestCollection.insertOne(newRequest);
+      res.send({ success: true, result });
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
