@@ -64,6 +64,12 @@ async function run() {
       const result = await foodsCollection.findOne(query);
       res.send({ success: true, result });
     });
+    //**************post a food**************
+    app.post("/foods", async (req, res) => {
+      const newFood = req.body;
+      const result = await foodsCollection.insertOne(newFood);
+      res.send({ success: true, result });
+    });
 
     //**************Request Food Api**************
     //************get all request**************
