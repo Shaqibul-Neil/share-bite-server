@@ -40,7 +40,6 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
-
     //************get food on quantity**************
     app.get("/food-quantity", async (req, res) => {
       const cursor = foodsCollection
@@ -64,6 +63,14 @@ async function run() {
       const result = await foodsCollection.findOne(query);
       res.send({ success: true, result });
     });
+    //************get my foods**************
+    app.get("/my-foods", async (req, res) => {
+      const email = req.query.email;
+      const result = await foodsCollection
+        .find({ "donator.email": email })
+        .toArray();
+      res.send(result);
+    });
     //**************post a food**************
     app.post("/foods", async (req, res) => {
       const newFood = req.body;
@@ -84,6 +91,14 @@ async function run() {
       const query = { foodId: foodId };
       const cursor = requestCollection.find(query);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+    //************get my request**************
+    app.get("/my-requests", async (req, res) => {
+      const email = req.query.email;
+      const result = await requestCollection
+        .find({ requestor_email: email })
+        .toArray();
       res.send(result);
     });
     //************post a request**************
