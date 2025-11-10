@@ -87,6 +87,13 @@ async function run() {
       const result = await foodsCollection.updateOne(query, update, options);
       res.send({ success: true, result });
     });
+    //**************delete a food**************
+    app.delete("/my-foods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodsCollection.deleteOne(query);
+      res.send({ success: true, result });
+    });
     //**************Request Food Api**************
     //************get all request**************
     app.get("/requests", async (req, res) => {
@@ -116,7 +123,40 @@ async function run() {
       const result = await requestCollection.insertOne(newRequest);
       res.send({ success: true, result });
     });
+    //**************delete a request**************
+    app.delete("/my-requests/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await requestCollection.deleteOne(query);
+      res.send({ success: true, result });
+    });
+    //**************accept a request**************
+    app.patch("/requests/accept/:id", async (req, res) => {
+      const id = req.params.id;
+      const { foodId } = req.body;
+      //console.log(foodId);
+      //update request status
+      const reqResult = await requestCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "Accepted" } }
+      );
+      //update food status
+      const foodResult = await foodsCollection.updateOne(
+        { _id: new ObjectId(foodId) },
+        { $set: { food_status: "Donated" } }
+      );
+      res.send({ success: true, reqResult, foodResult });
+    });
 
+    //**************reject a request**************
+    app.patch("/requests/reject/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await requestCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "Rejected" } }
+      );
+      res.send({ success: true, result });
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
