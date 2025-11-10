@@ -4,13 +4,37 @@ require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
+const admin = require("firebase-admin");
+const serviceAccount = require("./share-bite-f380a-firebase-adminsdk.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 //middleware
 app.use(cors());
 app.use(express.json());
 
-//firebase
 //firebase middleware
+const verifyFirebaseToken = async (req, res, next) => {
+  if (!req.headers.authorization)
+    return res.status(401).send({ message: "Unauthorized Access" });
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token)
+    return res
+      .status(401)
+      .send({ message: "Unauthorized Access : No token Found" });
+
+  //verify token
+  try {
+    const userInfo = await admin.auth().verifyIdToken(token);
+    req.token_email = userInfo.email;
+  } catch {
+    return res
+      .status(401)
+      .send({ message: "Unauthorized Access : Token Not Verified" });
+  }
+  next();
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@clustersharebite.si3xkac.mongodb.net/?appName=ClusterShareBite`;
 
@@ -57,30 +81,37 @@ async function run() {
       res.send(result);
     });
     //**************get food details**************
-    app.get("/food/:id", async (req, res) => {
+    app.get("/food/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodsCollection.findOne(query);
       res.send({ success: true, result });
     });
     //************get my foods**************
-    app.get("/my-foods", async (req, res) => {
+    app.get("/my-foods", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
+      if (email !== req.token_email)
+        return res.status(403).send({ message: "Forbidden Access" });
       const result = await foodsCollection
         .find({ "donator.email": email })
         .toArray();
       res.send(result);
     });
     //**************post a food**************
-    app.post("/foods", async (req, res) => {
+    app.post("/foods", verifyFirebaseToken, async (req, res) => {
       const newFood = req.body;
       const result = await foodsCollection.insertOne(newFood);
       res.send({ success: true, result });
     });
     //**************update a food**************
-    app.put("/update-food/:id", async (req, res) => {
+    app.put("/update-food/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const updateFood = req.body;
+      if (updateFood?.donator?.email !== req.token_email)
+        return res
+          .status(403)
+          .send({ message: "Forbidden: You cannot update this food" });
+      console.log(updateFood.donator.email);
       const query = { _id: new ObjectId(id) };
       const options = {};
       const update = { $set: updateFood };
@@ -88,8 +119,14 @@ async function run() {
       res.send({ success: true, result });
     });
     //**************delete a food**************
-    app.delete("/my-foods/:id", async (req, res) => {
+    app.delete("/my-foods/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
+      //checking if the donator email is same or not
+      const food = await foodsCollection.findOne({ _id: new ObjectId(id) });
+      if (food?.donator?.email !== req.token_email)
+        return res
+          .status(403)
+          .send({ message: "Forbidden: You cannot delete this food" });
       const query = { _id: new ObjectId(id) };
       const result = await foodsCollection.deleteOne(query);
       res.send({ success: true, result });
@@ -110,31 +147,50 @@ async function run() {
       res.send(result);
     });
     //************get my request**************
-    app.get("/my-requests", async (req, res) => {
+    app.get("/my-requests", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
+      if (email !== req.token_email)
+        return res.status(403).send({ message: "Forbidden Access" });
       const result = await requestCollection
         .find({ requestor_email: email })
         .toArray();
       res.send(result);
     });
     //************post a request**************
-    app.post("/requests", async (req, res) => {
+    app.post("/requests", verifyFirebaseToken, async (req, res) => {
       const newRequest = req.body;
+      if (newRequest?.requestor_email !== req.token_email)
+        return res
+          .status(403)
+          .send({ message: "Forbidden: Invalid requestor" });
       const result = await requestCollection.insertOne(newRequest);
       res.send({ success: true, result });
     });
+
     //**************delete a request**************
-    app.delete("/my-requests/:id", async (req, res) => {
+    app.delete("/my-requests/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
+
+      //check if the requestor is same
+      const requestor = await requestCollection.findOne(query);
+      if (requestor?.requestor_email !== req.token_email)
+        return res
+          .status(403)
+          .send({ message: "Forbidden: You cannot delete this request" });
       const result = await requestCollection.deleteOne(query);
       res.send({ success: true, result });
     });
     //**************accept a request**************
-    app.patch("/requests/accept/:id", async (req, res) => {
+    app.patch("/requests/accept/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const { foodId } = req.body;
-      //console.log(foodId);
+      //checking if the donor is same
+      const food = await foodsCollection.findOne({ _id: new ObjectId(foodId) });
+      if (food?.donator?.email !== req.token_email)
+        return res
+          .status(403)
+          .send({ message: "Forbidden: Only donator can accept" });
       //update request status
       const reqResult = await requestCollection.updateOne(
         { _id: new ObjectId(id) },
@@ -149,14 +205,22 @@ async function run() {
     });
 
     //**************reject a request**************
-    app.patch("/requests/reject/:id", async (req, res) => {
+    app.patch("/requests/reject/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
+      const { foodId } = req.body;
+      //checking if the donor is same
+      const food = await foodsCollection.findOne({ _id: new ObjectId(foodId) });
+      if (food?.donator?.email !== req.token_email)
+        return res
+          .status(403)
+          .send({ message: "Forbidden: Only donator can reject" });
       const result = await requestCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: { status: "Rejected" } }
       );
       res.send({ success: true, result });
     });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
