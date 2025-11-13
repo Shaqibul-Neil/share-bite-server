@@ -1,3 +1,4 @@
 node_modules
 .env
 share-bite-f380a-firebase-adminsdk.json
+.vercel
