@@ -12,6 +12,11 @@ router.get(
   verifyFirebaseToken,
   foodsController.getMyFoodStats
 );
+router.get(
+  "/my-chart",
+  verifyFirebaseToken,
+  foodsController.getMyFoodChartData
+);
 router.get("/my-score", verifyFirebaseToken, foodsController.getMyScore);
 router.post("/", verifyFirebaseToken, foodsController.addFood);
 router.put("/update-food/:id", verifyFirebaseToken, foodsController.updateFood);

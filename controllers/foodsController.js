@@ -10,22 +10,35 @@ const getAllFoods = async (req, res) => {
   res.send(result);
 };
 
-// Get top 6 by quantity
+// Get top 8 by quantity
 const getFoodByQuantity = async (req, res) => {
   const result = await foodsCollection
     .find()
     .sort({ food_quantity: -1 })
-    .limit(6)
+    .limit(8)
     .toArray();
   res.send(result);
 };
 
 // Get available foods
 const getAvailableFoods = async (req, res) => {
-  const result = await foodsCollection
-    .find({ food_status: "Available" })
+  const search = req.query.search || "";
+  const limit = parseInt(req.query.limit) || 8;
+  const skip = parseInt(req.query.skip) || 0;
+
+  const query = {
+    food_status: "Available",
+    food_name: { $regex: search, $options: "i" }, // case-insensitive search
+  };
+
+  const total = await foodsCollection.countDocuments(query);
+  const foods = await foodsCollection
+    .find(query)
+    .skip(skip)
+    .limit(limit)
     .toArray();
-  res.send(result);
+
+  res.send({ foods, total });
 };
 
 // Get food details
@@ -46,6 +59,25 @@ const getMyFoods = async (req, res) => {
     .toArray();
   //console.log("my foods", result);
   res.send(result);
+};
+
+// Get last 6 food donations of logged-in donor
+const getMyFoodChartData = async (req, res) => {
+  const email = req.query.email;
+  if (email !== req.token_email)
+    return res.status(403).send({ message: "Forbidden Access" });
+
+  try {
+    const foods = await foodsCollection
+      .find({ "donator.email": email })
+      .sort({ createdAt: -1 }) // latest first
+      .limit(6)
+      .toArray();
+
+    res.send({ success: true, foods });
+  } catch (err) {
+    res.status(500).send({ success: false });
+  }
 };
 
 //add food
@@ -169,4 +201,5 @@ module.exports = {
   deleteFood,
   getMyFoodStats,
   getMyScore,
+  getMyFoodChartData,
 };
