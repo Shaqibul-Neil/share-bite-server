@@ -24,5 +24,23 @@ const getTopRankings = async (req, res) => {
     res.status(500).send({ success: false, message: "Server Error" });
   }
 };
+//users score
+const getMyScore = async (req, res) => {
+  try {
+    const email = req.token_email;
 
-module.exports = { getTopRankings };
+    const user = await rankingsCollection.findOne(
+      { email },
+      { projection: { _id: 0, shareBiteScore: 1 } }
+    );
+
+    res.send({
+      success: true,
+      shareBiteScore: user?.shareBiteScore || 0,
+    });
+  } catch {
+    res.status(500).send({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { getTopRankings, getMyScore };

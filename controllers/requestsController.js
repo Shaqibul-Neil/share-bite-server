@@ -2,6 +2,7 @@ const { db } = require("../utils/db");
 const { ObjectId } = require("mongodb");
 const requestCollection = db.collection("requests");
 const foodsCollection = db.collection("foods");
+const rankingsCollection = db.collection("userRankings");
 
 // Get all requests
 const getAllRequests = async (req, res) => {
@@ -28,12 +29,35 @@ const getMyRequests = async (req, res) => {
   res.send(result);
 };
 
+// Get latest 3 requests for a user
+const getLatestRequests = async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    if (email !== req.token_email) {
+      return res.status(403).send({ message: "Forbidden Access" });
+    }
+
+    const latestRequests = await requestCollection
+      .find({ requestor_email: email })
+      .sort({ donationDate: -1, donationTime: -1 }) // newest first
+      .limit(3)
+      .toArray();
+    console.log(latestRequests);
+    res.send(latestRequests);
+  } catch (error) {
+    console.error("Error fetching latest requests:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+};
+
 // Post a request
 const addRequest = async (req, res) => {
   const newRequest = {
     ...req.body,
     donationDate: new Date().toISOString().split("T")[0],
     donationTime: new Date().toLocaleTimeString(),
+    createdAt: new Date(),
   };
   if (newRequest?.requestor_email !== req.token_email)
     return res.status(403).send({ message: "Forbidden: Invalid requestor" });
@@ -43,6 +67,15 @@ const addRequest = async (req, res) => {
   await foodsCollection.updateOne(
     { _id: new ObjectId(newRequest.foodId) },
     { $inc: { "request_stats.Pending": 1 } } // increment pending count
+  );
+  // score update for request
+  await rankingsCollection.updateOne(
+    { email: newRequest.requestor_email },
+    {
+      $inc: { shareBiteScore: 5 },
+      $set: { lastUpdated: new Date() },
+    },
+    { upsert: true }
   );
   res.send({ success: true, result });
 };
@@ -136,4 +169,5 @@ module.exports = {
   acceptRequest,
   rejectRequest,
   getUserRequestStats,
+  getLatestRequests,
 };

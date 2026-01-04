@@ -55,37 +55,24 @@ const addFood = async (req, res) => {
     const newFood = {
       ...req.body,
       donator: {
-        ...req.body.donator, // Keep name, phone, image
-        email: email, // Ensure email comes from the verified token
+        ...req.body.donator,
+        email: email,
       },
       donationDate: new Date().toISOString().split("T")[0], // "YYYY-MM-DD"
       donationTime: new Date().toLocaleTimeString(),
+      createdAt: new Date(),
     };
 
     const result = await foodsCollection.insertOne(newFood);
 
     // Calculate impact score
-    const totalDonations = await foodsCollection.countDocuments({
-      "donator.email": email,
-    });
-    const totalRequestsAgg = await requestCollection
-      .aggregate([
-        { $match: { requestor_email: email } },
-        { $group: { _id: null, totalRequests: { $sum: 1 } } },
-      ])
-      .toArray();
-
-    const totalRequests = totalRequestsAgg[0]?.totalRequests || 0;
-    const shareBiteScore = totalDonations * 100 + totalRequests * 5;
-    const { name } = req.body.donator || {};
-    // Update ranking collection
     await rankingsCollection.updateOne(
       { email },
       {
+        $inc: { shareBiteScore: 100 },
         $set: {
           email,
-          shareBiteScore,
-          name,
+          name: req.body?.donator?.name,
           lastUpdated: new Date(),
         },
       },

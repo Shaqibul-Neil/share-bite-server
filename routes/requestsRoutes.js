@@ -33,7 +33,11 @@ router.get("/my-stats", verifyFirebaseToken, async (req, res) => {
     res.status(500).send({ success: false, message: "Server Error" });
   }
 });
-
+router.get(
+  "/latest",
+  verifyFirebaseToken,
+  requestsController.getLatestRequests
+);
 router.post("/", verifyFirebaseToken, requestsController.addRequest);
 router.delete(
   "/my-requests/:id",
